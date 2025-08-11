@@ -35,15 +35,17 @@ export default function Home() {
         {/* Main Hero Content */}
         <main className="relative flex-1 flex items-center justify-center px-6 py-20 overflow-hidden">
           
+     
+          
           <div className="relative text-center max-w-4xl mx-auto space-y-8 z-10">
             {/* Hero Heading */}
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-light tracking-tight leading-tight font-serif">
-              Design feedback and revisions, all in one place
+            Turn scattered engineering discussions into searchable knowledge
             </h1>
             
             {/* Hero Description */}
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto font-normal leading-relaxed">
-              Cerium helps engineers collect, organize, and act on technical feedback without the back-and-forth chaos.
+            Your engineering discussions are scattered across Slack and GitHub. Cerium makes them searchable in seconds, so you stop asking the same questions twice.
             </p>
             
             {/* Call to Action */}
