@@ -1,0 +1,27 @@
+{
+  "name": "@cerium/db",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "generate": "drizzle-kit generate",
+    "migrate": "tsx src/migrate.ts",
+    "studio": "drizzle-kit studio",
+    "push": "drizzle-kit push"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.1",
+    "@types/pg": "^8.15.5",
+    "dotenv": "^17.2.2",
+    "drizzle-orm": "^0.44.5"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.4",
+    "tsx": "^4.19.2",
+    "@types/node": "^22.10.1"
+  }
+}

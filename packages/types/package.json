@@ -1,0 +1,26 @@
+{
+  "name": "@cerium/types",
+  "version": "1.0.0",
+  "description": "Shared TypeScript types for Cerium monorepo",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "drizzle-orm": "^0.44.5",
+    "zod": "^4.1.10"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {
+    "@cerium/db": "workspace:*"
+  }
+}
