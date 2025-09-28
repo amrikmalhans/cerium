@@ -1,9 +1,6 @@
 // Database types
 export * from './db';
 
-// Authentication types
-export * from './auth';
-
 // Form schemas and types
 export * from './forms';
 

@@ -95,13 +95,9 @@ async function getUsers(): Promise<ApiResponse<PaginatedResponse<User>>> {
 
 ## Development
 
+This package uses TypeScript source files directly - no compilation needed!
+
 ```bash
-# Build types
-pnpm build
-
-# Watch for changes
-pnpm dev
-
-# Clean build
-pnpm clean
+# Types are consumed directly from source
+# No build step required
 ```

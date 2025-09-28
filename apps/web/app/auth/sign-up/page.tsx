@@ -1,6 +1,5 @@
 "use client";
 
-// @ts-expect-error - ignore type error
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -24,7 +23,6 @@ export default function SignUpPage() {
   const [error, setError] = useState<string>("");
   const router = useRouter();
 
-  // 1. Define the form using React Hook Form with Zod validation
   const form = useForm<SignUpFormData>({
     resolver: zodResolver(signUpSchema),
     defaultValues: {
@@ -34,7 +32,6 @@ export default function SignUpPage() {
     },
   });
 
-  // 2. Define the submit handler
   const onSubmit = async (values: SignUpFormData) => {
     setLoading(true);
     setError("");
@@ -59,7 +56,10 @@ export default function SignUpPage() {
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="max-w-md w-full space-y-8 p-8">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-foreground">
+          <Link href="/" className="text-center block text-4xl font-bold tracking-wide text-foreground">
+            Cerium
+          </Link>
+          <h2 className="mt-6 text-center text-2xl font-bold tracking-tight text-foreground">
             Create your account
           </h2>
           <p className="mt-2 text-center text-sm text-muted-foreground">

@@ -1,91 +1,79 @@
 import { z } from "zod";
 
-// Auth form schemas
-export const signInSchema = z.object({
-  email: z
-    .string()
-    .min(1, "Email is required")
-    .email("Please enter a valid email address"),
-  password: z
-    .string()
-    .min(1, "Password is required")
-    .min(6, "Password must be at least 6 characters"),
-});
+// Form schemas and types
+export interface SignInCredentials {
+  email: string;
+  password: string;
+}
 
+export interface SignUpCredentials {
+  name: string;
+  email: string;
+  password: string;
+}
+
+// Zod schemas for form validation
 export const signUpSchema = z.object({
-  name: z
-    .string()
-    .min(1, "Name is required")
-    .min(2, "Name must be at least 2 characters")
-    .max(50, "Name must be less than 50 characters"),
-  email: z
-    .string()
-    .min(1, "Email is required")
-    .email("Please enter a valid email address"),
-  password: z
-    .string()
-    .min(1, "Password is required")
-    .min(6, "Password must be at least 6 characters")
-    .max(100, "Password must be less than 100 characters"),
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
-export const invitationAcceptanceSchema = z.object({
-  invitationId: z.string().min(1, "Invitation ID is required"),
-  name: z
-    .string()
-    .min(2, "Name must be at least 2 characters")
-    .max(50, "Name must be less than 50 characters")
-    .optional(),
-  password: z
-    .string()
-    .min(6, "Password must be at least 6 characters")
-    .max(100, "Password must be less than 100 characters")
-    .optional(),
+export const signInSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(1, "Password is required"),
 });
 
-// Organization form schemas
-export const organizationCreateSchema = z.object({
-  name: z
-    .string()
-    .min(1, "Organization name is required")
-    .min(2, "Organization name must be at least 2 characters")
-    .max(100, "Organization name must be less than 100 characters"),
-  slug: z
-    .string()
-    .min(1, "Slug is required")
-    .min(2, "Slug must be at least 2 characters")
-    .max(50, "Slug must be less than 50 characters")
-    .regex(/^[a-z0-9-]+$/, "Slug can only contain lowercase letters, numbers, and hyphens"),
+export const createOrganizationSchema = z.object({
+  name: z.string().min(1, "Organization name is required"),
+  slug: z.string()
+    .min(1, "Organization slug is required")
+    .regex(/^[a-z0-9-]+$/, "Slug must contain only lowercase letters, numbers, and hyphens")
+    .refine((val) => !val.startsWith("-") && !val.endsWith("-"), "Slug cannot start or end with a hyphen"),
 });
 
-export const organizationUpdateSchema = z.object({
-  name: z
-    .string()
-    .min(2, "Organization name must be at least 2 characters")
-    .max(100, "Organization name must be less than 100 characters")
-    .optional(),
-  slug: z
-    .string()
-    .min(2, "Slug must be at least 2 characters")
-    .max(50, "Slug must be less than 50 characters")
-    .regex(/^[a-z0-9-]+$/, "Slug can only contain lowercase letters, numbers, and hyphens")
-    .optional(),
-});
-
-export const memberInviteSchema = z.object({
-  email: z
-    .string()
-    .min(1, "Email is required")
-    .email("Please enter a valid email address"),
-  role: z
-    .enum(["admin", "member", "viewer"])
-    .default("member"),
-});
-
-// Infer types from schemas
-export type SignInFormData = z.infer<typeof signInSchema>;
+// Form data types
 export type SignUpFormData = z.infer<typeof signUpSchema>;
-export type InvitationAcceptanceFormData = z.infer<typeof invitationAcceptanceSchema>;
-export type OrganizationCreateFormData = z.infer<typeof organizationCreateSchema>;
-export type OrganizationUpdateFormData = z.infer<typeof organizationUpdateSchema>;
-export type MemberInviteFormData = z.infer<typeof memberInviteSchema>;
+export type SignInFormData = z.infer<typeof signInSchema>;
+export type CreateOrganizationFormData = z.infer<typeof createOrganizationSchema>;
+
+export interface InvitationAcceptance {
+  invitationId: string;
+  name?: string;
+  password?: string;
+}
+
+export type AuthProvider = 'google' | 'github' | 'credentials';
+
+export interface AuthError {
+  message: string;
+  code?: string;
+}
+
+// Better Auth result types - matches the actual library response
+export interface BetterAuthResult<T = any> {
+  data?: T;
+  error: {
+    message: string;
+    code?: string;
+  } | null;
+}
+
+// Generic auth result for our app
+export interface AuthResult<T = any> {
+  data?: T;
+  error?: AuthError;
+}
+
+// Dashboard-specific types
+export interface DashboardStats {
+  memberCount: number;
+  documentCount: number;
+  searchCount: number;
+}
+
+export interface OrganizationSwitchEvent {
+  fromOrgId?: string;
+  toOrgId: string;
+  timestamp: Date;
+}
