@@ -1,8 +1,4 @@
-import { OrganizationInvitationEmail } from '../../../emails/organization-invitation';
-import { Resend } from 'resend';
 import { NextRequest, NextResponse } from 'next/server';
-
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,33 +21,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data, error } = await resend.emails.send({
-      from: 'Cerium <noreply@updates.cerium.sh>', // Change this to your verified domain
-      to: [to],
-      subject: `Join ${teamName} on Cerium`,
-      react: OrganizationInvitationEmail({
-        invitedByUsername,
-        invitedByEmail,
-        teamName,
-        inviteLink,
-        inviteFromIp,
-        inviteFromLocation,
-      }),
+    // TODO: Integrate Loops email service
+    console.log('📧 Organization Invitation:', {
+      to,
+      invitedByUsername,
+      invitedByEmail,
+      teamName,
+      inviteLink,
+      inviteFromIp,
+      inviteFromLocation
     });
-
-    if (error) {
-      console.error('Resend error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
 
     return NextResponse.json({ 
       success: true, 
-      messageId: data?.id 
+      message: 'Invitation logged (email service not configured)'
     });
   } catch (error) {
-    console.error('Email sending error:', error);
+    console.error('Invitation processing error:', error);
     return NextResponse.json(
-      { error: 'Failed to send email' }, 
+      { error: 'Failed to process invitation' }, 
       { status: 500 }
     );
   }
