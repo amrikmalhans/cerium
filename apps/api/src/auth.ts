@@ -1,15 +1,15 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { nextCookies } from "better-auth/next-js";
 import { organization } from "better-auth/plugins";
-import db from "../../../packages/db/src/index";
-import * as schema from "../../../packages/db/src/schema";
+import * as schema from "@cerium/db/src/schema";
+import db from "@cerium/db/src/index";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
     schema,
   }),
+  baseURL: process.env.BETTER_AUTH_URL || "http://localhost:9999",
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: false,
@@ -22,6 +22,11 @@ export const auth = betterAuth({
     //   clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
     // },
   },
+  trustedOrigins: [
+    "http://localhost:3000",
+    "http://localhost:9999",
+    process.env.CLIENT_ORIGIN || "http://localhost:3000"
+  ],
   plugins: [
     organization({
       allowUserToCreateOrganization: true,
@@ -30,7 +35,7 @@ export const auth = betterAuth({
       invitationExpiresIn: 60 * 60 * 24 * 7,
       async sendInvitationEmail(data) {
         try {
-          const baseUrl = process.env.BETTER_AUTH_URL || 'http://localhost:3000';
+          const baseUrl = process.env.CLIENT_ORIGIN || 'http://localhost:3000';
           const inviteLink = `${baseUrl}/accept-invitation/${data.id}`;
           
           const response = await fetch(`${baseUrl}/api/send-invitation`, {
@@ -50,7 +55,7 @@ export const auth = betterAuth({
           });
 
           if (!response.ok) {
-            const error = await response.json();
+            const error = await response.json() as { error: string };
             throw new Error(error.error || 'Failed to send email');
           }
 
@@ -60,6 +65,5 @@ export const auth = betterAuth({
         }
       },
     }),
-    nextCookies()
   ],
 });

@@ -38,21 +38,6 @@ export interface AuthResult<T = any> {
     data?: T;
     error?: AuthError;
 }
-export interface LegacySignInFormData {
-    email: string;
-    password: string;
-}
-export interface LegacySignUpFormData {
-    name: string;
-    email: string;
-    password: string;
-}
-export interface FormErrors {
-    email?: string;
-    password?: string;
-    name?: string;
-    general?: string;
-}
 export interface BetterAuthSession {
     user: {
         id: string;
