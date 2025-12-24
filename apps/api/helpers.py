@@ -116,4 +116,3 @@ def get_conversation_id(client: WebClient, conversation_name: str, conversation_
             status_code=500,
             detail=f"Slack API error: {e.response.get('error', str(e))}"
         )
-
