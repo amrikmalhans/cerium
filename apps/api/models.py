@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List
 from enum import Enum
+from datetime import datetime
 
 
 class ServiceType(str, Enum):
@@ -19,3 +20,26 @@ class ExtractRequest(BaseModel):
     oldest: Optional[float] = Field(default=None, description="Oldest timestamp to include")
     latest: Optional[float] = Field(default=None, description="Latest timestamp to include")
     cursor: Optional[str] = Field(default=None, description="Pagination cursor for next page")
+
+
+class RetrieveRequest(BaseModel):
+    """Request model for semantic search retrieval."""
+    prompt: str = Field(..., description="The user prompt to search for")
+    match_count: Optional[int] = Field(default=5, description="Number of documents to retrieve")
+    match_threshold: Optional[float] = Field(default=0.7, description="Minimum similarity threshold (0-1)")
+
+
+class DocumentMatch(BaseModel):
+    """Response model for a matched document."""
+    id: int
+    content: str
+    user_name: Optional[str] = None
+    slack_ts: Optional[float] = None
+    created_at: datetime
+    similarity: float
+
+
+class RetrieveResponse(BaseModel):
+    """Response model for retrieval endpoint."""
+    matches: List[DocumentMatch]
+    count: int

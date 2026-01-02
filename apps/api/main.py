@@ -1,6 +1,9 @@
 from fastapi import FastAPI, HTTPException
-from models import ExtractRequest
+from models import ExtractRequest, RetrieveRequest, RetrieveResponse, DocumentMatch
 from extractors import get_extractor
+from embeddings import model
+from db import supabase
+import numpy as np
 
 app = FastAPI()
 
@@ -31,6 +34,55 @@ def extract_data(request: ExtractRequest):
     
     # Extract data using the service-specific extractor
     return extractor.extract(request)
+
+
+@app.post("/retrieve", response_model=RetrieveResponse)
+def retrieve_documents(request: RetrieveRequest):
+    """
+    Retrieve documents using semantic search based on a user prompt.
+    
+    Converts the prompt to an embedding and searches for similar documents
+    using the match_documents Postgres function.
+    """
+    try:
+        # Generate embedding from the prompt
+        # Using encode() for query embedding (standard SentenceTransformer method)
+        embedding = model.encode(request.prompt)
+        # Convert numpy array to list for JSON serialization
+        if isinstance(embedding, np.ndarray):
+            if embedding.ndim == 1:
+                embedding_list = embedding.tolist()
+            else:
+                # If batch, take first item
+                embedding_list = embedding[0].tolist()
+        else:
+            embedding_list = list(embedding)
+        
+        # Call the Postgres function via Supabase RPC
+        response = supabase.rpc(
+            "match_documents",
+            {
+                "query_embedding": embedding_list,
+                "match_count": request.match_count,
+                "match_threshold": request.match_threshold
+            }
+        ).execute()
+        
+        # Parse the response
+        matches = [
+            DocumentMatch(**match) for match in response.data
+        ]
+        
+        return RetrieveResponse(
+            matches=matches,
+            count=len(matches)
+        )
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error retrieving documents: {str(e)}"
+        )
 
 
 @app.get("/health")
