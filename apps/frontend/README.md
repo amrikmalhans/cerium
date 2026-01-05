@@ -10,12 +10,28 @@ pnpm install
 ```
 
 2. Create a `.env.local` file in the `apps/frontend` directory:
-```
-OPENAI_API_KEY=your_openai_api_key_here
+```env
+# Supabase Configuration (REQUIRED)
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# For API routes (server-side only)
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+
+# OpenAI Configuration
+OPENAI_API_KEY=your_openai_api_key
+
+# API Configuration
 API_BASE_URL=http://localhost:8000
+
+# Web App URL (for redirects)
+NEXT_PUBLIC_WEB_URL=http://localhost:3000
 ```
 
-Note: `API_BASE_URL` should point to your FastAPI backend (default: http://localhost:8000). Make sure the backend is running and accessible.
+**Important Notes:**
+- `NEXT_PUBLIC_*` variables are required and must be prefixed with `NEXT_PUBLIC_` to be accessible in client-side code
+- After creating/updating `.env.local`, **restart your dev server** for changes to take effect
+- `API_BASE_URL` should point to your FastAPI backend (default: http://localhost:8000)
 
 3. Run the development server:
 ```bash

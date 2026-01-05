@@ -17,20 +17,17 @@ interface ModelSelectorProps {
 
 export function ModelSelector({ value, onChange }: ModelSelectorProps) {
   return (
-    <div className="flex items-center gap-2">
-      <label className="text-sm font-medium">Model:</label>
-      <Select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-48"
-      >
-        {OPENAI_MODELS.map((model) => (
-          <option key={model.value} value={model.value}>
-            {model.label}
-          </option>
-        ))}
-      </Select>
-    </div>
+    <Select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-48"
+    >
+      {OPENAI_MODELS.map((model) => (
+        <option key={model.value} value={model.value}>
+          {model.label}
+        </option>
+      ))}
+    </Select>
   );
 }
 

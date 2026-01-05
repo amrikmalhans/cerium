@@ -20,15 +20,18 @@ class SlackExtractor(BaseExtractor):
         Returns:
             Raw Slack API response format
         """
-        # Validate Slack token is configured
-        if not constants.SLACK_BOT_TOKEN:
+        # Get Slack token from request or fall back to constants
+        slack_token = request.slack_bot_token or constants.SLACK_BOT_TOKEN
+        
+        # Validate Slack token is available
+        if not slack_token:
             raise HTTPException(
                 status_code=500,
-                detail="Slack bot token not configured. Please set SLACK_BOT_TOKEN in constants.py"
+                detail="Slack bot token not provided and not configured. Please provide slack_bot_token in request or set SLACK_BOT_TOKEN in constants.py"
             )
         
         # Initialize Slack client
-        client = WebClient(token=constants.SLACK_BOT_TOKEN)
+        client = WebClient(token=slack_token)
         
         try:
             # Resolve conversation name to ID

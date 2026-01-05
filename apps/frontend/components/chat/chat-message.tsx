@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { User, Bot } from "lucide-react";
+import { Bot } from "lucide-react";
 
 interface ChatMessageProps {
   role: "user" | "assistant";
@@ -18,24 +18,24 @@ export function ChatMessage({ role, content }: ChatMessageProps) {
         isUser ? "flex-row-reverse" : "flex-row"
       )}
     >
-      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-        {isUser ? (
-          <User className="w-5 h-5 text-primary" />
-        ) : (
+      {!isUser && (
+        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
           <Bot className="w-5 h-5 text-primary" />
-        )}
-      </div>
+        </div>
+      )}
       <div
         className={cn(
-          "flex-1 max-w-[80%] rounded-lg p-4",
+          "rounded-lg p-4",
           isUser
-            ? "bg-primary/10 text-right"
-            : "bg-secondary/50 text-left"
+            ? "bg-primary/10 text-right inline-block max-w-[80%]"
+            : "bg-secondary/50 text-left flex-1 max-w-[80%]"
         )}
       >
-        <div className="text-sm font-medium mb-2">
-          {isUser ? "You" : "Assistant"}
-        </div>
+        {!isUser && (
+          <div className="text-sm font-medium mb-2">
+            Assistant
+          </div>
+        )}
         <div className="text-sm whitespace-pre-wrap break-words">
           {content}
         </div>

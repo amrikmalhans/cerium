@@ -1,13 +1,15 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { useSession } from "@/lib/auth-client";
+import { useAuth } from "@/hooks/useAuth";
 import { PageLayout } from "@/components/layout";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
+const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3001";
+
 export default function Home() {
-  const { data: session } = useSession();
+  const { user, loading } = useAuth();
 
   return (
     <PageLayout>
@@ -23,13 +25,13 @@ export default function Home() {
             </p>
             
             <div>
-              {session ? (
-                <Link href="/dashboard">
+              {!loading && user ? (
+                <a href={FRONTEND_URL}>
                   <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 px-8 py-3 text-lg font-medium">
-                    Go to Dashboard
+                    Go to Chat
                     <ArrowRight className="ml-2 w-4 h-4" />
                   </Button>
-                </Link>
+                </a>
               ) : (
                 <Link href="/auth/sign-up">
                   <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 px-8 py-3 text-lg font-medium">

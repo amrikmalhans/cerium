@@ -1,9 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { signIn } from "@/lib/auth-client";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -18,10 +17,11 @@ import Link from "next/link";
 import { signInSchema, type SignInFormData } from "@cerium/types";
 import { useState } from "react";
 
+const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL;
+
 export default function SignInPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
-  const router = useRouter();
 
   // 1. Define the form using React Hook Form with Zod validation
   const form = useForm<SignInFormData>({
@@ -38,15 +38,23 @@ export default function SignInPage() {
     setError("");
 
     try {
-      const result = await signIn.email(values);
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email: values.email,
+        password: values.password,
+      });
 
-      if (result.error) {
-        setError(result.error.message || "Sign in failed");
-      } else {
-        router.push("/dashboard");
+      if (signInError) {
+        setError(signInError.message || "Sign in failed");
+      } else if (data.session) {
+        // Redirect to frontend app with both tokens
+        const params = new URLSearchParams({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token || '',
+        });
+        window.location.href = `${FRONTEND_URL}?${params.toString()}`;
       }
-    } catch (err) {
-      setError("An unexpected error occurred");
+    } catch (err: any) {
+      setError(err.message || "An unexpected error occurred");
       console.error("Sign in error:", err);
     } finally {
       setLoading(false);

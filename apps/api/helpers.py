@@ -1,6 +1,7 @@
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from fastapi import HTTPException
+from typing import Optional
 
 
 def get_conversation_id(client: WebClient, conversation_name: str, conversation_type: str) -> str:
@@ -20,6 +21,10 @@ def get_conversation_id(client: WebClient, conversation_name: str, conversation_
     """
     try:
         if conversation_type == "channel":
+            # Check if conversation_name is already a channel ID (starts with 'C')
+            if conversation_name.startswith('C'):
+                return conversation_name
+            
             # Fetch all channels (public and private)
             response = client.conversations_list(
                 types="public_channel,private_channel",
@@ -43,6 +48,10 @@ def get_conversation_id(client: WebClient, conversation_name: str, conversation_
             )
         
         elif conversation_type == "group":
+            # Check if conversation_name is already a group ID (starts with 'G')
+            if conversation_name.startswith('G'):
+                return conversation_name
+            
             # Fetch private channels/groups
             response = client.conversations_list(
                 types="private_channel",
@@ -116,3 +125,36 @@ def get_conversation_id(client: WebClient, conversation_name: str, conversation_
             status_code=500,
             detail=f"Slack API error: {e.response.get('error', str(e))}"
         )
+
+
+def get_user_name(client: WebClient, user_id: str) -> Optional[str]:
+    """
+    Get user's display name or real name from Slack user ID.
+    
+    Args:
+        client: Slack WebClient instance
+        user_id: Slack user ID (e.g., "U099Q293CQ6")
+    
+    Returns:
+        User's display name, real name, or None if not found
+    """
+    try:
+        response = client.users_info(user=user_id)
+        
+        if not response["ok"]:
+            return None
+        
+        user = response.get("user", {})
+        profile = user.get("profile", {})
+        
+        # Prefer display_name, fallback to real_name, then to name
+        return (
+            profile.get("display_name") or
+            profile.get("real_name") or
+            user.get("name") or
+            None
+        )
+    except SlackApiError:
+        return None
+    except Exception:
+        return None

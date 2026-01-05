@@ -28,17 +28,22 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
   };
 
   return (
-    <div className="flex gap-2 p-4 border-t border-border bg-background">
+    <div className="flex items-center gap-2 px-4 py-4 border-t border-border bg-background">
       <Input
         value={message}
         onChange={(e) => setMessage(e.target.value)}
         onKeyPress={handleKeyPress}
-        placeholder="Type your message..."
+        placeholder="Type a message..."
         disabled={disabled}
         className="flex-1"
       />
-      <Button onClick={handleSend} disabled={disabled || !message.trim()}>
-        <Send className="w-4 h-4" />
+      <Button
+        onClick={handleSend}
+        disabled={disabled || !message.trim()}
+        className="flex-shrink-0 bg-primary text-primary-foreground hover:bg-primary/90"
+        size="icon"
+      >
+        <Send className="w-5 h-5" />
       </Button>
     </div>
   );

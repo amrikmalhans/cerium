@@ -32,10 +32,16 @@ export const createOrganizationSchema = z.object({
     .refine((val) => !val.startsWith("-") && !val.endsWith("-"), "Slug cannot start or end with a hyphen"),
 });
 
+export const apiKeysSchema = z.object({
+  slack_bot_token: z.string().optional().or(z.literal("")),
+  openai_api_key: z.string().min(1, "OpenAI API key is required"),
+});
+
 // Form data types
 export type SignUpFormData = z.infer<typeof signUpSchema>;
 export type SignInFormData = z.infer<typeof signInSchema>;
 export type CreateOrganizationFormData = z.infer<typeof createOrganizationSchema>;
+export type ApiKeysFormData = z.infer<typeof apiKeysSchema>;
 
 export interface InvitationAcceptance {
   invitationId: string;

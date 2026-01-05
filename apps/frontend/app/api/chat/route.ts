@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import { createClient } from '@supabase/supabase-js';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
 const API_BASE_URL = process.env.API_BASE_URL || "http://localhost:8000";
+
+// Create Supabase client for auth verification
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 interface DocumentMatch {
   id: number;
@@ -63,7 +70,26 @@ function buildContextFromDocuments(documents: DocumentMatch[]): string {
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, model = "gpt-4o" } = await req.json();
+    // Verify authentication
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const { messages, model = "gpt-4o", conversationId } = await req.json();
 
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
