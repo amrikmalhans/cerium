@@ -4,8 +4,14 @@ Ingestion module for embedding and storing documents in the database.
 from typing import List, Optional
 import numpy as np
 from datetime import datetime
+import json
 from embeddings import model
 from db import supabase
+from extractors import get_extractor
+from models import ExtractRequest, ServiceType
+from helpers import parse_slack_messages, parse_slack_messages_individual, get_user_id_to_username_map
+from slack_sdk import WebClient
+import constants
 
 
 class DocumentIngestion:
@@ -208,27 +214,185 @@ def test_embedding_generation():
         return None
 
 
+def get_latest_slack_timestamp() -> Optional[float]:
+    """
+    Get the latest Slack message timestamp from the database.
+    
+    Returns:
+        Latest Slack timestamp (ts) as float, or None if no messages exist
+        
+    Raises:
+        Exception: If slack_ts column doesn't exist in the database
+    """
+    try:
+        # Query for the most recent document by slack_ts
+        result = supabase.table('documents').select('slack_ts').order('slack_ts', desc=True).limit(1).execute()
+        
+        if result.data and len(result.data) > 0 and result.data[0].get('slack_ts') is not None:
+            return float(result.data[0]['slack_ts'])
+        
+        return None
+    except Exception as e:
+        # If slack_ts column doesn't exist, raise an error
+        raise Exception(
+            f"slack_ts column not found in database. Please add it with: "
+            f"ALTER TABLE documents ADD COLUMN slack_ts FLOAT;"
+        ) from e
+
+
+def fetch_all_slack_messages(channel_name: str, conversation_type: str = "channel", latest_timestamp: Optional[float] = None) -> dict:
+    """
+    Fetch messages from a Slack channel, handling pagination.
+    If latest_timestamp is provided, only fetches messages newer than that timestamp.
+    
+    Args:
+        channel_name: Name of the channel
+        conversation_type: Type of conversation ('channel', 'group', or 'im')
+        latest_timestamp: Optional timestamp to only fetch messages newer than this
+        
+    Returns:
+        Combined Slack API response with all messages
+    """
+    slack_extractor = get_extractor("slack")
+    all_messages = []
+    cursor = None
+    has_more = True
+    
+    if latest_timestamp:
+        print(f"Fetching new messages from '{channel_name}' (after timestamp {latest_timestamp})...")
+    else:
+        print(f"Fetching all messages from '{channel_name}'...")
+    
+    while has_more:
+        # Create request with current cursor for pagination
+        request_params = {
+            "service": ServiceType.SLACK,
+            "conversation_name": channel_name,
+            "conversation_type": conversation_type,
+            "limit": 100,  # Maximum per request
+        }
+        
+        # Add cursor if we have one
+        if cursor:
+            request_params["cursor"] = cursor
+        
+        # Add latest timestamp to only get newer messages
+        if latest_timestamp:
+            request_params["latest"] = latest_timestamp
+        
+        request = ExtractRequest(**request_params)
+        
+        # Extract messages
+        response = slack_extractor.extract(request)
+        
+        if not response.get("ok"):
+            raise Exception(f"Failed to fetch messages: {response.get('error', 'Unknown error')}")
+        
+        # Add messages to collection
+        messages = response.get("messages", [])
+        all_messages.extend(messages)
+        
+        # Check if there are more messages
+        has_more = response.get("has_more", False)
+        if has_more:
+            cursor = response.get("response_metadata", {}).get("next_cursor")
+            print(f"   Fetched {len(all_messages)} messages so far...")
+        else:
+            print(f"   Fetched {len(all_messages)} messages!")
+    
+    # Return combined response
+    return {
+        "ok": True,
+        "messages": all_messages,
+        "has_more": False
+    }
+
+
 if __name__ == "__main__":
     """
-    Run tests for the ingestion functionality.
+    Run the full ingestion pipeline for all messages in the all-cerium channel.
     
     Usage:
         python ingestion.py
     """
     print("=" * 60)
-    print("Document Ingestion Test Suite")
+    print("Slack Channel Ingestion Pipeline")
     print("=" * 60)
     
-    # Test embedding generation first (doesn't require database)
-    test_embedding_generation()
-    
-    # Test single ingestion
-    test_single_ingestion()
-    
-    # Test batch ingestion
-    test_batch_ingestion()
+    try:
+        # Step 0: Check for existing messages to determine if this is an incremental update
+        print("\n🔍 Step 0: Checking for existing messages in database...")
+        try:
+            latest_timestamp = get_latest_slack_timestamp()
+            if latest_timestamp:
+                print(f"   Found existing messages. Latest timestamp: {latest_timestamp}")
+                print(f"   Will fetch only new messages (incremental update)")
+            else:
+                print(f"   No existing messages found. Will fetch all messages (full sync)")
+        except Exception as e:
+            print(f"   ❌ Error: {e}")
+            raise
+        
+        # Step 1: Fetch messages from the channel (only new ones if incremental)
+        print("\n📥 Step 1: Fetching messages from 'all-cerium' channel...")
+        all_messages_response = fetch_all_slack_messages("all-cerium", "channel", latest_timestamp=latest_timestamp)
+        
+        print(f"✅ Successfully fetched {len(all_messages_response.get('messages', []))} messages")
+        
+        # Step 2: Get user IDs and create username mapping
+        print("\n👥 Step 2: Mapping user IDs to usernames...")
+        user_ids = list(set([
+            msg.get("user") 
+            for msg in all_messages_response.get("messages", []) 
+            if msg.get("user") and msg.get("blocks")
+        ]))
+        
+        if constants.SLACK_BOT_TOKEN:
+            slack_client = WebClient(token=constants.SLACK_BOT_TOKEN)
+            user_id_to_username = get_user_id_to_username_map(slack_client, user_ids)
+            print(f"✅ Found {len(user_id_to_username)} users")
+        else:
+            user_id_to_username = None
+            print("⚠️  Warning: SLACK_BOT_TOKEN not set, using user IDs instead of usernames")
+        
+        # Step 3: Parse messages individually in order
+        print("\n📝 Step 3: Parsing messages individually...")
+        parsed_messages = parse_slack_messages_individual(all_messages_response, user_id_to_username)
+        print(f"✅ Parsed {len(parsed_messages)} individual messages")
+        
+        # Step 4: Embed and insert each message separately into the database
+        print("\n💾 Step 4: Embedding and inserting messages into database...")
+        ingestion = DocumentIngestion()
+        inserted_count = 0
+        
+        for i, message in enumerate(parsed_messages, 1):
+            try:
+                # Convert ts string to float (required for incremental updates)
+                if not message.get("ts"):
+                    raise ValueError(f"Message {i} is missing timestamp (ts) field")
+                
+                slack_ts = float(message["ts"])
+                
+                result = ingestion.ingest(
+                    content=message["content"],
+                    user_name=message["user_name"],
+                    slack_ts=slack_ts
+                )
+                inserted_count += 1
+                if i % 10 == 0 or i == len(parsed_messages):
+                    print(f"   ✅ Inserted {i}/{len(parsed_messages)} messages...")
+            except Exception as e:
+                print(f"   ❌ Failed to insert message {i} from user '{message['user_name']}': {e}")
+        
+        print(f"\n✅ Successfully inserted {inserted_count} documents into the database!")
+        print(f"   Total messages processed: {len(parsed_messages)}")
+        
+    except Exception as e:
+        print(f"\n❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
     
     print("\n" + "=" * 60)
-    print("Tests completed!")
+    print("Pipeline completed!")
     print("=" * 60)
 
