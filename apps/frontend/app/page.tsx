@@ -70,12 +70,12 @@ export default function ChatPage() {
 
     try {
       // Create conversation if none exists
-      if (!conversationId) {
+    if (!conversationId) {
         setHasStartedConversation(true); // Hide welcome screen immediately
-        const newConversation = await createConversation(undefined, model);
-        conversationId = newConversation.id;
-        setCurrentChatId(conversationId);
-      }
+      const newConversation = await createConversation(undefined, model);
+      conversationId = newConversation.id;
+      setCurrentChatId(conversationId);
+    }
 
       // Get session token
       const { data: { session } } = await supabase.auth.getSession();
