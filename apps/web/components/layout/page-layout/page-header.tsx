@@ -2,68 +2,43 @@
 
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
-import { useSession, signOut } from "@/lib/auth-client";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/lib/supabase";
 import Link from "next/link";
-import { Skeleton } from "@/components/ui/skeleton";
+
+const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3001";
 
 export function PageHeader() {
-  const { data: session, isPending } = useSession();
+  const { user, loading } = useAuth();
 
   const handleSignOut = async () => {
-    await signOut();
+    await supabase.auth.signOut();
+    window.location.href = "/";
   };
 
   return (
     <header className="border-b border-border/30 dark:border-border">
       <div className="container mx-auto flex h-16 items-center justify-between px-6">
-        <div className="text-xl font-bold tracking-tight">Cerium</div>
-
-        <nav className="hidden md:flex items-center space-x-8">
-          <Link
-            href="/features"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Features
-          </Link>
-          <Link
-            href="/about"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            About Us
-          </Link>
-          <Link
-            href="/faq"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            FAQ
-          </Link>
-          <Link
-            href="/pricing"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Pricing
-          </Link>
-        </nav>
+        <Link href="/" className="text-xl font-bold tracking-tight">Cerium</Link>
 
         <div className="flex items-center space-x-4">
-          {isPending ? (
-            <Skeleton className="h-8 w-24" />
-          ) : session ? (
+          {loading ? (
+            <div className="h-8 w-24" />
+          ) : user ? (
             <>
-              <Link
-                href="/dashboard"
+              <a
+                href={FRONTEND_URL}
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
-                Dashboard
-              </Link>
+                Go to Chat
+              </a>
               <span className="text-sm text-muted-foreground">
-                Welcome, {session.user.name || session.user.email}
+                {user.email}
               </span>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleSignOut}
-                className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
               >
                 Sign Out
               </Button>
@@ -77,11 +52,7 @@ export function PageHeader() {
                 Log in
               </Link>
               <Link href="/auth/sign-up">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                >
+                <Button variant="outline" size="sm">
                   Sign up
                 </Button>
               </Link>

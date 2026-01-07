@@ -1,7 +1,7 @@
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from fastapi import HTTPException
-from typing import Dict, List, Any, Optional
+from typing import Optional
 
 
 def get_conversation_id(client: WebClient, conversation_name: str, conversation_type: str) -> str:
@@ -21,6 +21,10 @@ def get_conversation_id(client: WebClient, conversation_name: str, conversation_
     """
     try:
         if conversation_type == "channel":
+            # Check if conversation_name is already a channel ID (starts with 'C')
+            if conversation_name.startswith('C'):
+                return conversation_name
+            
             # Fetch all channels (public and private)
             response = client.conversations_list(
                 types="public_channel,private_channel",
@@ -44,6 +48,10 @@ def get_conversation_id(client: WebClient, conversation_name: str, conversation_
             )
         
         elif conversation_type == "group":
+            # Check if conversation_name is already a group ID (starts with 'G')
+            if conversation_name.startswith('G'):
+                return conversation_name
+            
             # Fetch private channels/groups
             response = client.conversations_list(
                 types="private_channel",
@@ -119,254 +127,34 @@ def get_conversation_id(client: WebClient, conversation_name: str, conversation_
         )
 
 
-def get_user_id_to_username_map(client: WebClient, user_ids: List[str]) -> Dict[str, str]:
+def get_user_name(client: WebClient, user_id: str) -> Optional[str]:
     """
-    Get username mapping for a list of user IDs from Slack.
+    Get user's display name or real name from Slack user ID.
     
     Args:
         client: Slack WebClient instance
-        user_ids: List of Slack user IDs to look up
-        
+        user_id: Slack user ID (e.g., "U099Q293CQ6")
+    
     Returns:
-        Dictionary mapping user IDs to usernames:
-        {
-            "U123": "john.doe",
-            "U456": "jane.smith",
-            ...
-        }
+        User's display name, real name, or None if not found
     """
-    if not user_ids:
-        return {}
-    
-    user_id_to_username: Dict[str, str] = {}
-    
     try:
-        # Get all users from Slack
-        users_response = client.users_list()
+        response = client.users_info(user=user_id)
         
-        if not users_response.get("ok"):
-            return user_id_to_username
+        if not response["ok"]:
+            return None
         
-        # Create a mapping of user IDs to usernames
-        for user in users_response.get("members", []):
-            user_id = user.get("id")
-            if user_id in user_ids:
-                # Prefer display_name, fallback to name, then real_name
-                profile = user.get("profile", {})
-                username = (
-                    profile.get("display_name") or
-                    profile.get("real_name") or
-                    user.get("name") or
-                    user_id  # Fallback to user ID if no name found
-                )
-                user_id_to_username[user_id] = username
+        user = response.get("user", {})
+        profile = user.get("profile", {})
         
-    except Exception as e:
-        # If lookup fails, return empty dict (will use user IDs as fallback)
-        print(f"Warning: Failed to get user info: {e}")
-    
-    return user_id_to_username
-
-
-def parse_slack_messages_individual(slack_response: Dict[str, Any], user_id_to_username_map: Optional[Dict[str, str]] = None) -> List[Dict[str, str]]:
-    """
-    Parse Slack API response and extract individual messages in order.
-    Only includes messages that have text content (messages with blocks attribute).
-    
-    Args:
-        slack_response: The Slack API response dictionary with structure:
-            {
-                "ok": bool,
-                "messages": [
-                    {
-                        "user": "U123",
-                        "blocks": [...],
-                        ...
-                    },
-                    ...
-                ],
-                ...
-            }
-        user_id_to_username_map: Optional dictionary mapping user IDs to usernames.
-            If provided, usernames will be used instead of user IDs.
-            If None, user IDs will be used.
-    
-    Returns:
-        List of dictionaries in order, each containing user_name and content:
-        [
-            {"user_name": "john.doe", "content": "hi"},
-            {"user_name": "john.doe", "content": "can you do this"},
-            {"user_name": "jane.smith", "content": "yes"},
-            ...
-        ]
-        
-        All newlines are removed and replaced with spaces.
-    """
-    if not slack_response.get("ok"):
-        return []
-    
-    messages = slack_response.get("messages", [])
-    parsed_messages = []
-    
-    for message in messages:
-        # Only process messages that have blocks (text messages)
-        if "blocks" not in message or not message.get("blocks"):
-            continue
-        
-        # Skip messages without a user field
-        if "user" not in message:
-            continue
-        
-        user_id = message["user"]
-        
-        # Extract text from blocks structure
-        # Path: blocks[0].elements[0].elements[0].text
-        text = None
-        try:
-            blocks = message.get("blocks", [])
-            if blocks and len(blocks) > 0:
-                elements = blocks[0].get("elements", [])
-                if elements and len(elements) > 0:
-                    inner_elements = elements[0].get("elements", [])
-                    if inner_elements and len(inner_elements) > 0:
-                        # Look for text element
-                        for elem in inner_elements:
-                            if elem.get("type") == "text" and "text" in elem:
-                                text = elem["text"]
-                                break
-        except (KeyError, IndexError, TypeError):
-            # If structure is different, try to get text directly from message
-            text = message.get("text", "")
-        
-        # If we found text, add it to the list
-        if text and text.strip():
-            # Remove newlines and clean up text
-            cleaned_text = text.strip().replace('\n', ' ').replace('\r', ' ')
-            cleaned_text = ' '.join(cleaned_text.split())
-            
-            # Get username if mapping provided, otherwise use user_id
-            if user_id_to_username_map and user_id in user_id_to_username_map:
-                user_name = user_id_to_username_map[user_id]
-            else:
-                user_name = user_id
-            
-            parsed_messages.append({
-                "user_name": user_name,
-                "content": cleaned_text,
-                "ts": message.get("ts")  # Include timestamp for tracking
-            })
-    
-    return parsed_messages
-
-
-def parse_slack_messages(slack_response: Dict[str, Any], user_id_to_username_map: Optional[Dict[str, str]] = None) -> Dict[str, str]:
-    """
-    Parse Slack API response and extract user-to-message mappings.
-    Only includes messages that have text content (messages with blocks attribute).
-    
-    Args:
-        slack_response: The Slack API response dictionary with structure:
-            {
-                "ok": bool,
-                "messages": [
-                    {
-                        "user": "U123",
-                        "blocks": [...],
-                        ...
-                    },
-                    ...
-                ],
-                ...
-            }
-    
-    Args:
-        slack_response: The Slack API response dictionary with structure:
-            {
-                "ok": bool,
-                "messages": [
-                    {
-                        "user": "U123",
-                        "blocks": [...],
-                        ...
-                    },
-                    ...
-                ],
-                ...
-            }
-        user_id_to_username_map: Optional dictionary mapping user IDs to usernames.
-            If provided, usernames will be used as keys instead of user IDs.
-            If None, user IDs will be used as keys.
-    
-    Returns:
-        Dictionary mapping usernames (or user IDs if mapping not provided) to their message text:
-        {
-            "john.doe": "their message text",
-            "jane.smith": "another message",
-            ...
-        }
-        
-        If a user has multiple messages, they are concatenated with spaces.
-        All newlines are removed and replaced with spaces.
-    """
-    if not slack_response.get("ok"):
-        return {}
-    
-    messages = slack_response.get("messages", [])
-    user_messages: Dict[str, List[str]] = {}
-    
-    for message in messages:
-        # Only process messages that have blocks (text messages)
-        if "blocks" not in message or not message.get("blocks"):
-            continue
-        
-        # Skip messages without a user field
-        if "user" not in message:
-            continue
-        
-        user_id = message["user"]
-        
-        # Extract text from blocks structure
-        # Path: blocks[0].elements[0].elements[0].text
-        text = None
-        try:
-            blocks = message.get("blocks", [])
-            if blocks and len(blocks) > 0:
-                elements = blocks[0].get("elements", [])
-                if elements and len(elements) > 0:
-                    inner_elements = elements[0].get("elements", [])
-                    if inner_elements and len(inner_elements) > 0:
-                        # Look for text element
-                        for elem in inner_elements:
-                            if elem.get("type") == "text" and "text" in elem:
-                                text = elem["text"]
-                                break
-        except (KeyError, IndexError, TypeError):
-            # If structure is different, try to get text directly from message
-            text = message.get("text", "")
-        
-        # If we found text, add it to the user's messages
-        if text and text.strip():
-            if user_id not in user_messages:
-                user_messages[user_id] = []
-            # Remove newlines from individual messages and strip whitespace
-            cleaned_text = text.strip().replace('\n', ' ').replace('\r', ' ')
-            # Remove extra spaces
-            cleaned_text = ' '.join(cleaned_text.split())
-            user_messages[user_id].append(cleaned_text)
-    
-    # Convert list of messages per user to single string (concatenated with spaces)
-    result: Dict[str, str] = {}
-    for user_id, messages_list in user_messages.items():
-        # Join messages with spaces and ensure no newlines remain
-        combined = " ".join(messages_list)
-        combined = combined.replace('\n', ' ').replace('\r', ' ')
-        
-        # Use username if mapping provided, otherwise use user_id
-        if user_id_to_username_map and user_id in user_id_to_username_map:
-            key = user_id_to_username_map[user_id]
-        else:
-            key = user_id
-        
-        result[key] = combined
-    
-    return result
+        # Prefer display_name, fallback to real_name, then to name
+        return (
+            profile.get("display_name") or
+            profile.get("real_name") or
+            user.get("name") or
+            None
+        )
+    except SlackApiError:
+        return None
+    except Exception:
+        return None

@@ -1,9 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { signUp } from "@/lib/auth-client";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -17,11 +16,14 @@ import {
 import Link from "next/link";
 import { signUpSchema, type SignUpFormData } from "@cerium/types";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3001";
 
 export default function SignUpPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
-  const router = useRouter();
 
   const form = useForm<SignUpFormData>({
     resolver: zodResolver(signUpSchema),
@@ -37,17 +39,16 @@ export default function SignUpPage() {
     setError("");
 
     try {
-      const result = await signUp.email(values);
-
-      if (result.error) {
-        setError(result.error.message || "Sign up failed");
-      } else {
-        router.push("/dashboard");
+      // Store sign-up data in sessionStorage to pass to setup page
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("signup_data", JSON.stringify(values));
       }
-    } catch (err) {
-      setError("An unexpected error occurred");
+      // Redirect to API keys setup page (account will be created there)
+      // Use window.location to ensure redirect happens
+      window.location.href = "/auth/setup-api-keys";
+    } catch (err: any) {
+      setError(err.message || "An unexpected error occurred");
       console.error("Sign up error:", err);
-    } finally {
       setLoading(false);
     }
   };
@@ -145,7 +146,7 @@ export default function SignUpPage() {
                 disabled={loading}
                 className="group relative flex w-full justify-center rounded-md bg-primary py-2 px-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50"
               >
-                {loading ? "Creating account..." : "Sign up"}
+                {loading ? "Loading..." : "Continue"}
               </Button>
             </div>
           </form>
