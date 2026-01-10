@@ -19,10 +19,10 @@ export function ChatMessage({ role, content }: ChatMessageProps) {
       )}
     >
       {!isUser && (
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
           <Bot className="w-5 h-5 text-primary" />
         </div>
-      )}
+        )}
       <div
         className={cn(
           "rounded-lg p-4",
@@ -32,9 +32,9 @@ export function ChatMessage({ role, content }: ChatMessageProps) {
         )}
       >
         {!isUser && (
-          <div className="text-sm font-medium mb-2">
+        <div className="text-sm font-medium mb-2">
             Assistant
-          </div>
+        </div>
         )}
         <div className="text-sm whitespace-pre-wrap break-words">
           {content}

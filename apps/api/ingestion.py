@@ -9,7 +9,6 @@ from embeddings import model
 from db import supabase
 from extractors import get_extractor
 from models import ExtractRequest, ServiceType
-from helpers import parse_slack_messages, parse_slack_messages_individual, get_user_id_to_username_map
 from slack_sdk import WebClient
 import constants
 
@@ -306,93 +305,3 @@ def fetch_all_slack_messages(channel_name: str, conversation_type: str = "channe
         "messages": all_messages,
         "has_more": False
     }
-
-
-if __name__ == "__main__":
-    """
-    Run the full ingestion pipeline for all messages in the all-cerium channel.
-    
-    Usage:
-        python ingestion.py
-    """
-    print("=" * 60)
-    print("Slack Channel Ingestion Pipeline")
-    print("=" * 60)
-    
-    try:
-        # Step 0: Check for existing messages to determine if this is an incremental update
-        print("\n🔍 Step 0: Checking for existing messages in database...")
-        try:
-            latest_timestamp = get_latest_slack_timestamp()
-            if latest_timestamp:
-                print(f"   Found existing messages. Latest timestamp: {latest_timestamp}")
-                print(f"   Will fetch only new messages (incremental update)")
-            else:
-                print(f"   No existing messages found. Will fetch all messages (full sync)")
-        except Exception as e:
-            print(f"   ❌ Error: {e}")
-            raise
-        
-        # Step 1: Fetch messages from the channel (only new ones if incremental)
-        print("\n📥 Step 1: Fetching messages from 'all-cerium' channel...")
-        all_messages_response = fetch_all_slack_messages("all-cerium", "channel", latest_timestamp=latest_timestamp)
-        
-        print(f"✅ Successfully fetched {len(all_messages_response.get('messages', []))} messages")
-        
-        # Step 2: Get user IDs and create username mapping
-        print("\n👥 Step 2: Mapping user IDs to usernames...")
-        user_ids = list(set([
-            msg.get("user") 
-            for msg in all_messages_response.get("messages", []) 
-            if msg.get("user") and msg.get("blocks")
-        ]))
-        
-        if constants.SLACK_BOT_TOKEN:
-            slack_client = WebClient(token=constants.SLACK_BOT_TOKEN)
-            user_id_to_username = get_user_id_to_username_map(slack_client, user_ids)
-            print(f"✅ Found {len(user_id_to_username)} users")
-        else:
-            user_id_to_username = None
-            print("⚠️  Warning: SLACK_BOT_TOKEN not set, using user IDs instead of usernames")
-        
-        # Step 3: Parse messages individually in order
-        print("\n📝 Step 3: Parsing messages individually...")
-        parsed_messages = parse_slack_messages_individual(all_messages_response, user_id_to_username)
-        print(f"✅ Parsed {len(parsed_messages)} individual messages")
-        
-        # Step 4: Embed and insert each message separately into the database
-        print("\n💾 Step 4: Embedding and inserting messages into database...")
-        ingestion = DocumentIngestion()
-        inserted_count = 0
-        
-        for i, message in enumerate(parsed_messages, 1):
-            try:
-                # Convert ts string to float (required for incremental updates)
-                if not message.get("ts"):
-                    raise ValueError(f"Message {i} is missing timestamp (ts) field")
-                
-                slack_ts = float(message["ts"])
-                
-                result = ingestion.ingest(
-                    content=message["content"],
-                    user_name=message["user_name"],
-                    slack_ts=slack_ts
-                )
-                inserted_count += 1
-                if i % 10 == 0 or i == len(parsed_messages):
-                    print(f"   ✅ Inserted {i}/{len(parsed_messages)} messages...")
-            except Exception as e:
-                print(f"   ❌ Failed to insert message {i} from user '{message['user_name']}': {e}")
-        
-        print(f"\n✅ Successfully inserted {inserted_count} documents into the database!")
-        print(f"   Total messages processed: {len(parsed_messages)}")
-        
-    except Exception as e:
-        print(f"\n❌ Error: {e}")
-        import traceback
-        traceback.print_exc()
-    
-    print("\n" + "=" * 60)
-    print("Pipeline completed!")
-    print("=" * 60)
-
