@@ -2,10 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { createClient } from '@supabase/supabase-js';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 const API_BASE_URL = process.env.API_BASE_URL || "http://localhost:8000";
 
 // Create Supabase client for auth verification
@@ -89,14 +85,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { messages, model = "gpt-4o", conversationId } = await req.json();
+    // Fetch user's OpenAI API key from user_profiles table
+    const { data: userProfile, error: profileError } = await supabase
+      .from("user_profiles")
+      .select("openai_api_key")
+      .eq("user_id", user.id)
+      .single();
 
-    if (!process.env.OPENAI_API_KEY) {
+    if (profileError || !userProfile || !userProfile.openai_api_key) {
       return NextResponse.json(
-        { error: "OpenAI API key not configured" },
-        { status: 500 }
+        { error: "OpenAI API key not configured. Please set up your API keys in settings." },
+        { status: 400 }
       );
     }
+
+    // Create OpenAI client with user's API key
+    const openai = new OpenAI({
+      apiKey: userProfile.openai_api_key,
+    });
+
+    const { messages, model = "gpt-4o", conversationId } = await req.json();
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json(

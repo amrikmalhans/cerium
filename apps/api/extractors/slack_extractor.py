@@ -4,7 +4,6 @@ from slack_sdk.errors import SlackApiError
 from extractors.base import BaseExtractor
 from models import ExtractRequest
 from helpers import get_conversation_id
-import constants
 
 
 class SlackExtractor(BaseExtractor):
@@ -20,14 +19,14 @@ class SlackExtractor(BaseExtractor):
         Returns:
             Raw Slack API response format
         """
-        # Get Slack token from request or fall back to constants
-        slack_token = request.slack_bot_token or constants.SLACK_BOT_TOKEN
+        # Get Slack token from request - no fallback
+        slack_token = request.slack_bot_token
         
         # Validate Slack token is available
         if not slack_token:
             raise HTTPException(
-                status_code=500,
-                detail="Slack bot token not provided and not configured. Please provide slack_bot_token in request or set SLACK_BOT_TOKEN in constants.py"
+                status_code=400,
+                detail="Slack bot token is required. Please provide slack_bot_token in request."
             )
         
         # Initialize Slack client
@@ -59,23 +58,13 @@ class SlackExtractor(BaseExtractor):
             # Fetch conversation history
             response = client.conversations_history(**params)
             
-            # If bot is not in channel, try to join it automatically
+            # If bot is not in channel, provide clear error message
+            # (Note: Only channels the bot is already a member of should be shown in the UI)
             if not response["ok"] and response.get("error") == "not_in_channel":
-                try:
-                    # Try to join the channel
-                    join_response = client.conversations_join(channel=conversation_id)
-                    if not join_response["ok"]:
-                        raise HTTPException(
-                            status_code=403,
-                            detail=f"Cannot access channel. Bot must be added to channel '{request.conversation_name}'. Error: {join_response.get('error', 'Unknown error')}"
-                        )
-                    # Retry fetching messages after joining
-                    response = client.conversations_history(**params)
-                except SlackApiError as join_error:
-                    raise HTTPException(
-                        status_code=403,
-                        detail=f"Cannot access channel. Bot must be added to channel '{request.conversation_name}'. Error: {join_error.response.get('error', str(join_error))}"
-                    )
+                raise HTTPException(
+                    status_code=403,
+                    detail=f"Bot is not a member of channel '{request.conversation_name}'. Please add the bot to this channel in Slack before extracting messages."
+                )
             
             if not response["ok"]:
                 raise HTTPException(

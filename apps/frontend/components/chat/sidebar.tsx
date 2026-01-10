@@ -2,11 +2,12 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, User } from "lucide-react";
+import { Plus, Search, User, Settings } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useConversations } from "@/hooks/useConversations";
+import { SettingsDialog } from "@/components/chat/settings-dialog";
 
 const WEB_URL = process.env.NEXT_PUBLIC_WEB_URL || "http://localhost:3000";
 
@@ -19,6 +20,7 @@ interface SidebarProps {
 export function Sidebar({ currentChatId, onNewChat, onSelectChat }: SidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [mounted, setMounted] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const { user } = useAuth();
   const { conversations, loading: conversationsLoading } = useConversations();
 
@@ -145,8 +147,21 @@ export function Sidebar({ currentChatId, onNewChat, onSelectChat }: SidebarProps
         )}
       </div>
 
+      {/* Settings */}
+      <div className="px-4 pt-3 pb-2 border-t border-border">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start text-muted-foreground hover:text-foreground"
+          onClick={() => setSettingsOpen(true)}
+        >
+          <Settings className="w-4 h-4 mr-2" />
+          Settings
+        </Button>
+      </div>
+
       {/* User Profile */}
-      <div className="px-4 pt-3 pb-4 border-t border-border">
+      <div className="px-4 pt-2 pb-4">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
             <User className="w-4 h-4" />
@@ -166,6 +181,8 @@ export function Sidebar({ currentChatId, onNewChat, onSelectChat }: SidebarProps
           </div>
         </div>
       </div>
+
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
   );
 }
