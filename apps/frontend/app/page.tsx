@@ -159,9 +159,6 @@ export default function ChatPage() {
     // Messages will be automatically loaded by useMessages hook
   };
 
-  const handleTryExample = (example: string) => {
-    handleSend(example);
-  };
 
   return (
     <AuthGuard>
@@ -188,7 +185,7 @@ export default function ChatPage() {
               <div className="text-muted-foreground">Loading messages...</div>
             </div>
           ) : messages.length === 0 && !isLoading && !isRetrieving && !currentChatId && !hasStartedConversation ? (
-            <WelcomeScreen onTryExample={handleTryExample} />
+            <WelcomeScreen />
           ) : (
             <div className="max-w-3xl mx-auto p-4 space-y-4">
               {messages.map((message) => (

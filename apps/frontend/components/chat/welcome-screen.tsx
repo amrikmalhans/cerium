@@ -1,19 +1,8 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { MessageSquare, ArrowRight } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 
-interface WelcomeScreenProps {
-  onTryExample: (example: string) => void;
-}
-
-export function WelcomeScreen({ onTryExample }: WelcomeScreenProps) {
-  const exampleQueries = [
-    "Design a scalable chat backend",
-    "Explain RAG architecture",
-    "How to implement semantic search?",
-  ];
-
+export function WelcomeScreen() {
   return (
     <div className="flex flex-col items-center justify-center h-full px-4">
       <div className="max-w-2xl w-full text-center space-y-8">
@@ -44,9 +33,6 @@ export function WelcomeScreen({ onTryExample }: WelcomeScreenProps) {
             <span className="text-muted-foreground">Chat with multiple AI models</span>
           </div>
         </div>
-
-        {/* Try Example */}
-      
       </div>
     </div>
   );
