@@ -3,17 +3,9 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/useAuth"
-import { supabase } from "@/lib/supabase"
-
-const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3001";
 
 export function Header() {
   const { user, loading } = useAuth();
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    window.location.href = "/";
-  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -38,24 +30,16 @@ export function Header() {
           {loading ? (
             <div className="h-8 w-24" />
           ) : user ? (
-            <>
-              <a
-                href={FRONTEND_URL}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Go to Chat
-              </a>
-              <Button variant="ghost" size="sm" onClick={handleSignOut}>
-                Sign Out
-              </Button>
-            </>
+            <span className="text-sm text-muted-foreground">
+              Coming soon...
+            </span>
           ) : (
             <>
-              <Button variant="ghost" size="sm" className="hidden sm:inline-flex" asChild>
-                <Link href="/auth/sign-in">Sign In</Link>
+              <Button variant="ghost" size="sm" className="hidden sm:inline-flex" disabled>
+                Coming soon...
               </Button>
-              <Button size="sm" asChild>
-                <Link href="/auth/sign-up">Get Started</Link>
+              <Button size="sm" disabled>
+                Coming soon...
               </Button>
             </>
           )}

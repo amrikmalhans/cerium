@@ -2,7 +2,6 @@
 
 import { Button } from "@/components/ui/button"
 import { ArrowRight } from "lucide-react"
-import Link from "next/link"
 
 export function CTASection() {
   return (
@@ -16,19 +15,12 @@ export function CTASection() {
             Join hundreds of teams using Cerium to find answers faster and stop reinventing the wheel.
           </p>
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Button size="lg" className="gap-2" asChild>
-              <Link href="/auth/sign-up">
-                Get started
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-            <Button size="lg" variant="outline" className="gap-2 bg-transparent">
-              Watch Demo
+            <Button size="lg" className="gap-2" disabled>
+              Coming soon...
+              <ArrowRight className="h-4 w-4" />
             </Button>
           </div>
-          <p className="mt-6 text-xs text-muted-foreground">
-            No credit card required · 14-day free trial · Cancel anytime
-          </p>
+
         </div>
       </div>
     </section>
