@@ -10,7 +10,7 @@ def get_conversation_id(client: WebClient, conversation_name: str, conversation_
     
     Args:
         client: Slack WebClient instance
-        conversation_name: Name of the channel, group, or username/email for DM
+        conversation_name: Name of the channel, group, or username/email for DM, or a conversation ID
         conversation_type: Type of conversation ('channel', 'group', or 'im')
     
     Returns:
@@ -20,11 +20,14 @@ def get_conversation_id(client: WebClient, conversation_name: str, conversation_
         HTTPException: If conversation is not found or inaccessible
     """
     try:
+        # If conversation_name is already a valid Slack conversation ID, return it directly
+        # Slack IDs start with: C (public channel), G (private channel/group), D (DM)
+        # This check should happen FIRST, before any conversation_type logic
+        if conversation_name and conversation_name.startswith(('C', 'G', 'D')):
+            return conversation_name
+        
+        # Only do name-based lookup if it's not already an ID
         if conversation_type == "channel":
-            # Check if conversation_name is already a channel ID (starts with 'C')
-            if conversation_name.startswith('C'):
-                return conversation_name
-            
             # Fetch all channels (public and private)
             response = client.conversations_list(
                 types="public_channel,private_channel",
@@ -48,10 +51,6 @@ def get_conversation_id(client: WebClient, conversation_name: str, conversation_
             )
         
         elif conversation_type == "group":
-            # Check if conversation_name is already a group ID (starts with 'G')
-            if conversation_name.startswith('G'):
-                return conversation_name
-            
             # Fetch private channels/groups
             response = client.conversations_list(
                 types="private_channel",

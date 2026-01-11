@@ -168,24 +168,38 @@ def retrieve_documents(request: RetrieveRequest):
 @app.post("/slack/channels", response_model=SlackChannelsResponse)
 def list_slack_channels(request: SlackChannelsRequest):
     """
-    List all Slack channels (public and private) that the bot can access.
+    List all Slack channels (public and private) that the bot is a member of.
     
+    Only returns channels where the bot is already a member.
     Requires a Slack bot token with appropriate scopes.
     """
     try:
         client = WebClient(token=request.slack_bot_token)
         
-        # Fetch all channels (public and private)
-        response = client.conversations_list(
-            types="public_channel,private_channel",
-            exclude_archived=True
-        )
+        # Fetch channels that the bot is a member of (public and private)
+        # users_conversations only returns channels the bot is already in
+        all_channels = []
+        cursor = None
         
-        if not response["ok"]:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to list channels: {response.get('error', 'Unknown error')}"
+        while True:
+            response = client.users_conversations(
+                types="public_channel,private_channel",
+                exclude_archived=True,
+                cursor=cursor
             )
+            
+            if not response["ok"]:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to list channels: {response.get('error', 'Unknown error')}"
+                )
+            
+            all_channels.extend(response.get("channels", []))
+            
+            # Check for pagination
+            cursor = response.get("response_metadata", {}).get("next_cursor")
+            if not cursor:
+                break
         
         # Parse channels
         channels = [
@@ -195,7 +209,7 @@ def list_slack_channels(request: SlackChannelsRequest):
                 is_private=channel.get("is_private", False),
                 is_archived=channel.get("is_archived", False)
             )
-            for channel in response.get("channels", [])
+            for channel in all_channels
             if not channel.get("is_archived", False)  # Filter out archived channels
         ]
         
