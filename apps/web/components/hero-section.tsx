@@ -2,14 +2,8 @@
 
 import { Button } from "@/components/ui/button"
 import { ArrowRight, Sparkles } from "lucide-react"
-import Link from "next/link"
-import { useAuth } from "@/hooks/useAuth"
-
-const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3001";
 
 export function HeroSection() {
-  const { user, loading } = useAuth();
-
   return (
     <section className="relative overflow-hidden border-b border-border/40">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(120,200,150,0.08),transparent_50%)]" />
@@ -31,23 +25,9 @@ export function HeroSection() {
           </p>
 
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-            {!loading && user ? (
-              <Button size="lg" className="gap-2" asChild>
-                <a href={FRONTEND_URL}>
-                  Go to Chat
-                  <ArrowRight className="h-4 w-4" />
-                </a>
-              </Button>
-            ) : (
-              <Button size="lg" className="gap-2" asChild>
-                <Link href="/auth/sign-up">
-                  Get started
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-            )}
-            <Button size="lg" variant="outline" className="gap-2 bg-transparent">
-              Watch Demo
+            <Button size="lg" className="gap-2" disabled>
+              Coming soon...
+              <ArrowRight className="h-4 w-4" />
             </Button>
           </div>
 
