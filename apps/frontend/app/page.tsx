@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = 'force-dynamic';
+
 import { useState, useRef, useEffect } from "react";
 import { ChatMessage } from "@/components/chat/chat-message";
 import { ChatInput } from "@/components/chat/chat-input";
@@ -126,11 +128,13 @@ export default function ChatPage() {
       );
 
       // Update conversation title from first user message if title is still default
-      const currentConversation = conversations.find(c => c.id === conversationId);
-      if (currentConversation && (currentConversation.title === 'New Chat' || !currentConversation.title)) {
-        const title = content.substring(0, 50).trim();
-        if (title) {
-          await updateConversation(conversationId, { title });
+      if (conversationId) {
+        const currentConversation = conversations.find(c => c.id === conversationId);
+        if (currentConversation && (currentConversation.title === 'New Chat' || !currentConversation.title)) {
+          const title = content.substring(0, 50).trim();
+          if (title) {
+            await updateConversation(conversationId, { title });
+          }
         }
       }
     } catch (error: any) {
@@ -188,10 +192,12 @@ export default function ChatPage() {
             <WelcomeScreen />
           ) : (
             <div className="max-w-3xl mx-auto p-4 space-y-4">
-              {messages.map((message) => (
+              {messages
+                .filter((message) => message.role === 'user' || message.role === 'assistant')
+                .map((message) => (
                 <div key={message.id} className="space-y-2">
                   <ChatMessage
-                    role={message.role}
+                    role={message.role as 'user' | 'assistant'}
                     content={message.content}
                   />
                   {message.metadata?.retrievedDocuments &&
